@@ -1,54 +1,68 @@
-import DeployButton from "../components/DeployButton";
-import AuthButton from "../components/AuthButton";
-import { createClient } from "@/utils/supabase/server";
-import ConnectSupabaseSteps from "@/components/tutorial/ConnectSupabaseSteps";
-import SignUpUserSteps from "@/components/tutorial/SignUpUserSteps";
-import Header from "@/components/Header";
+"use client";
 
-export default async function Index() {
-  const canInitSupabaseClient = () => {
-    // This function is just for the interactive tutorial.
-    // Feel free to remove it once you have Supabase connected.
-    try {
-      createClient();
-      return true;
-    } catch (e) {
-      return false;
+import "./App.css";
+import { createClient } from "@/utils/supabase/client";
+import { Fragment, useEffect, useState } from "react";
+
+export default function Profile() {
+  const [media, setMedia] = useState([]);
+
+  const supabase = createClient();
+  const bucket = "image-uploader-bucket";
+
+  async function getMedia() {
+    const { data, error } = await supabase.storage.from(bucket).list();
+    if (data) {
+      setMedia(data as any);
+    } else {
+      console.log("Error: ", error);
     }
-  };
+  }
 
-  const isSupabaseConnected = canInitSupabaseClient();
+  async function uploadImage(e: any) {
+    let file = e.target.files[0];
+
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(e.target.files[0].name, file);
+
+    if (data) {
+      getMedia();
+    } else {
+      console.log("Error: ", error);
+    }
+  }
+
+  useEffect(() => {
+    getMedia();
+  }, []);
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-20 items-center">
-      <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-        <div className="w-full max-w-4xl flex justify-between items-center p-3 text-sm">
-          <DeployButton />
-          {isSupabaseConnected && <AuthButton />}
-        </div>
-      </nav>
-
-      <div className="flex-1 flex flex-col gap-20 max-w-4xl px-3">
-        <Header />
-        <main className="flex-1 flex flex-col gap-6">
-          <h2 className="font-bold text-4xl mb-4">Next steps</h2>
-          {isSupabaseConnected ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-        </main>
+    <section>
+      <h1 className="heading">Picture Storage ŵ Supabase & Next.js</h1>
+      <div className="imageUploadContainer">
+        <p>Upload your image here</p>
+        <input
+          type="file"
+          onChange={(e) => uploadImage(e)}
+          accept="image/png, image/jpeg"
+        />
       </div>
 
-      <footer className="w-full border-t border-t-foreground/10 p-8 flex justify-center text-center text-xs">
-        <p>
-          Powered by{" "}
-          <a
-            href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-            target="_blank"
-            className="font-bold hover:underline"
-            rel="noreferrer"
-          >
-            Supabase
-          </a>
-        </p>
-      </footer>
-    </div>
+      <div className="imagesContainer">
+        {media.map((media: any) => {
+          return (
+            <Fragment key={media.name}>
+              <img
+                src={`https://asilsdsihhitmflrxnmr.supabase.co/storage/v1/object/public/image-uploader-bucket/${media.name}`}
+                height={300}
+                width={300}
+                alt={media.name}
+              />
+            </Fragment>
+          );
+        })}
+      </div>
+    </section>
   );
 }
